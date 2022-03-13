@@ -3,8 +3,14 @@ import discord
 import math
 import sqlite3
 
+# set global vars
 bot_name = "rpg-bot#4333"
 discord_token = os.environ["PY_VAR_RPGBOT_TOKEN"]
+message_file = "./message_history"
+message_delimiter = "||//??"
+
+# open message history file to save for AI
+outfile = open(message_file, "a")
 
 # connect to discord
 client = discord.Client()
@@ -87,6 +93,8 @@ async def on_message(message):
 #    if 'https://' in message.content:
 #       await message.delete()
     if bot_name != str(message.author):
+        outfile.write(message.content + "\n")
+        outfile.write(message_delimiter + "\n")
         guild_name = message.channel.guild.id
         user_name = message.author
         await give_experience(str(guild_name), str(user_name), message.channel.id, 1)
