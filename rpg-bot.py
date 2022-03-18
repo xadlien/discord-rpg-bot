@@ -65,7 +65,7 @@ async def give_experience(guild, user, channel_id, amount=1):
         experience_points = amount
         level = 0
         skill_points = 0
-        cur.execute(f"insert into experience (guild, discord_user, experience, level, skill_points) values (?, ?, ?, ?, ?)", (guild, user, experience_points, level, skill_points))
+        cur.execute(f"insert into experience (guild, discord_user, experience, level, skill_points) values (%s, %s, %s, %s, %s)", (guild, user, experience_points, level, skill_points))
         con.commit()
 
     else:
