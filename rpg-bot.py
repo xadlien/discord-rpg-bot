@@ -1,17 +1,17 @@
 import os
 import discord
 import math
-import sqlite3
+import psycopg2
 from discord.ext import commands
 
 # set global vars
 bot_name = "rpg-bot#4333"
 discord_token = os.environ["PY_VAR_RPGBOT_TOKEN"]
-message_file = "./message_history"
-message_delimiter = "||//??"
-
-# open message history file to save for AI
-outfile = open(message_file, "a")
+database_url = os.environ["DATABASE_URL"]
+database_user = database_url.split(":")[1].replace("/", "")
+database_password, database_host = database_url.split(":")[2].split("@")
+database_name = database_url.split("/")[-1]
+database_port = 5432
 
 # set bot 
 bot = commands.Bot(command_prefix="!")
@@ -20,26 +20,32 @@ bot = commands.Bot(command_prefix="!")
 client = discord.Client()
 
 # open sqlite database
-con = sqlite3.connect('rpg-bot.db')
+con = psycopg2.connect(
+    dbname=database_name, 
+    user=database_user, 
+    password=database_password, 
+    host=database_host, 
+    port=database_port)
+
 cur = con.cursor()
 
 def create_tables():
 
     # create experience table
     cur.execute('''CREATE TABLE if not exists experience
-                (id integer not null primary key, 
+                (id int not null primary key, 
                 guild text, 
                 user text, 
-                experience integer, 
-                level integer,
-                skill_points integer not null)''')
+                experience int, 
+                level int,
+                skill_points int not null)''')
     # create stats table
     cur.execute('''CREATE TABLE if not exists stats
-                (id integer not null primary key,
-                experience_id integer not null, 
-                strength integer not null,
-                dexterity integer not null,
-                luck integer not null,
+                (id int not null primary key,
+                experience_id int not null, 
+                strength int not null,
+                dexterity int not null,
+                luck int not null,
                 foreign key (experience_id) references experience (id))''')
     con.commit()
 
