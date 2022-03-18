@@ -33,7 +33,7 @@ def create_tables():
 
     # create experience table
     cur.execute('''CREATE TABLE if not exists experience
-                (id int not null primary key, 
+                (id serial primary key, 
                 guild text, 
                 discord_user text, 
                 experience int, 
@@ -41,8 +41,8 @@ def create_tables():
                 skill_points int not null)''')
     # create stats table
     cur.execute('''CREATE TABLE if not exists stats
-                (id int not null primary key,
-                experience_id int not null, 
+                (id serial primary key,
+                experience_id serial not null, 
                 strength int not null,
                 dexterity int not null,
                 luck int not null,
