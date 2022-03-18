@@ -35,7 +35,7 @@ def create_tables():
     cur.execute('''CREATE TABLE if not exists experience
                 (id int not null primary key, 
                 guild text, 
-                user text, 
+                discord_user text, 
                 experience int, 
                 level int,
                 skill_points int not null)''')
@@ -57,7 +57,7 @@ async def give_experience(guild, user, channel_id, amount=1):
     user_formatted = user.replace("'", "''").replace('"', '""')
 
     # get experience 
-    cur.execute(f"select * from experience where user = '{user_formatted}' and guild = '{guild_formatted}'")
+    cur.execute(f"select * from experience where discord_user = '{user_formatted}' and guild = '{guild_formatted}'")
     data = cur.fetchone() 
 
     # if no return values add in a row
@@ -65,7 +65,7 @@ async def give_experience(guild, user, channel_id, amount=1):
         experience_points = amount
         level = 0
         skill_points = 0
-        cur.execute(f"insert into experience (guild, user, experience, level, skill_points) values (?, ?, ?, ?, ?)", (guild, user, experience_points, level, skill_points))
+        cur.execute(f"insert into experience (guild, discord_user, experience, level, skill_points) values (?, ?, ?, ?, ?)", (guild, user, experience_points, level, skill_points))
         con.commit()
 
     else:
@@ -90,7 +90,7 @@ async def check_level(guild, user, experience, level, skill_points, channel_id):
         level = level + 1
         skill_points = skill_points + 1
         experience = experience - needed_exp
-        cur.execute(f"update experience set experience = {experience}, level = {level} , skill_points = {skill_points} where user = '{user}' and guild = '{guild}'")
+        cur.execute(f"update experience set experience = {experience}, level = {level} , skill_points = {skill_points} where discord_user = '{user}' and guild = '{guild}'")
         con.commit()
         print(f"{guild}: {user} is now at level {level} with {experience} experience")
         user_formatted = "#".join(user.split("#")[:-1])
@@ -157,7 +157,7 @@ async def spend_skill_point(ctx, stat):
     # check if any skill points are available
     user = ctx.author.name
     guild = ctx.guild.id
-    cur.execute(f"select skill_points from experience where user = '{user}' and guild = '{guild}'")
+    cur.execute(f"select skill_points from experience where discord_user = '{user}' and guild = '{guild}'")
     data = cur.fetchone()
     if data is not None:
         skill_points = data[0]
