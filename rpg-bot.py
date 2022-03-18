@@ -2,6 +2,7 @@ import os
 import discord
 import math
 import sqlite3
+from discord.ext import commands
 
 # set global vars
 bot_name = "rpg-bot#4333"
@@ -12,6 +13,9 @@ message_delimiter = "||//??"
 # open message history file to save for AI
 outfile = open(message_file, "a")
 
+# set bot 
+bot = commands.Bot(command_prefix="!")
+
 # connect to discord
 client = discord.Client()
 
@@ -21,9 +25,22 @@ cur = con.cursor()
 
 def create_tables():
 
-    # Create table
+    # create experience table
     cur.execute('''CREATE TABLE if not exists experience
-                (guild text, user text, experience integer, level integer)''')
+                (id integer not null primary key, 
+                guild text, 
+                user text, 
+                experience integer, 
+                level integer,
+                skill_points integer not null)''')
+    # create stats table
+    cur.execute('''CREATE TABLE if not exists stats
+                (id integer not null primary key,
+                experience_id integer not null, 
+                strength integer not null,
+                dexterity integer not null,
+                luck integer not null,
+                foreign key (experience_id) references experience (id))''')
     con.commit()
 
 
@@ -41,22 +58,23 @@ async def give_experience(guild, user, channel_id, amount=1):
     if data is None:
         experience_points = amount
         level = 0
-        cur.execute(f"insert into experience values (?, ?, ?, ?)", (guild, user, experience_points, level))
+        skill_points = 0
+        cur.execute(f"insert into experience (guild, user, experience, level, skill_points) values (?, ?, ?, ?, ?)", (guild, user, experience_points, level, skill_points))
         con.commit()
 
     else:
-        guild, user, experience, level = data
+        id, guild, user, experience, level, skill_points = data
         experience_points = experience + amount
-        cur.execute(f"update experience set experience = {experience_points} where user = '{user_formatted}' and guild = '{guild_formatted}'")
+        cur.execute(f"update experience set experience = {experience_points} where id = {id}")
         con.commit()
 
     print(f'{guild}: {user} is at {experience_points} experience')
 
     # check to see if they can level up
-    await check_level(guild_formatted, user_formatted, experience_points, level, channel_id)
+    await check_level(guild_formatted, user_formatted, experience_points, level, skill_points, channel_id)
 
 
-async def check_level(guild, user, experience, level, channel_id):
+async def check_level(guild, user, experience, level, skill_points, channel_id):
 
     # get the amount needed for the next level
     # if we have enough level up the user
@@ -64,13 +82,14 @@ async def check_level(guild, user, experience, level, channel_id):
     # print(f"needed: {needed_exp}, has: {experience}")
     if experience >= needed_exp:
         level = level + 1
+        skill_points = skill_points + 1
         experience = experience - needed_exp
-        cur.execute(f"update experience set experience = {experience}, level = {level} where user = '{user}' and guild = '{guild}'")
+        cur.execute(f"update experience set experience = {experience}, level = {level} , skill_points = {skill_points} where user = '{user}' and guild = '{guild}'")
         con.commit()
         print(f"{guild}: {user} is now at level {level} with {experience} experience")
         user_formatted = "#".join(user.split("#")[:-1])
-        ch = await client.fetch_channel(int(channel_id))
-        await ch.send(f"{user_formatted} is now at level {level}!")
+        ch = await bot.fetch_channel(int(channel_id))
+        await ch.send(f"{user_formatted} is now at level {level}!\n\tSkill Points: {skill_points}")
 
 
 async def get_exp_needed(level):
@@ -83,12 +102,12 @@ async def get_exp_needed(level):
 # ensure tables are created
 create_tables()
 
-@client.event
+@bot.event
 async def on_ready():
     print("Connected to Discord!")
 
 
-@client.event
+@bot.event
 async def on_message(message):
 #    if 'https://' in message.content:
 #       await message.delete()
@@ -98,6 +117,7 @@ async def on_message(message):
         guild_name = message.channel.guild.id
         user_name = message.author
         await give_experience(str(guild_name), str(user_name), message.channel.id, 1)
+        await bot.process_commands(message)
         
         # print(message.author.mention)
         # print(dir(message))
@@ -106,7 +126,7 @@ async def on_message(message):
         # print(dir(message.channel.guild))
         # await message.channel.send(f"{message.author.mention} said {message.content}")
 
-@client.event
+@bot.event
 async def on_raw_reaction_add(payload):
     # print(dir(payload))
     # print(payload.member)
@@ -118,4 +138,33 @@ async def on_raw_reaction_add(payload):
         user_name = str(payload.member)
         await give_experience(guild_name, user_name, payload.channel_id, 1)
 
-client.run(discord_token)
+@bot.command()
+async def spend_skill_point(ctx, stat):
+
+    # set allowed values
+    allowed_stats = [
+        "strength",
+        "dexterity",
+        "luck"
+    ]
+
+    # check if any skill points are available
+    user = ctx.author.name
+    guild = ctx.guild.id
+    cur.execute(f"select skill_points from experience where user = '{user}' and guild = '{guild}'")
+    data = cur.fetchone()
+    if data is not None:
+        skill_points = data[0]
+        if skill_points > 0:
+            if stat in allowed_stats:
+                print("ALLOWED")
+            else:
+                print(stat)
+        else:
+            print(dir(ctx))
+            ctx.send(f"{stat} is not an allowed stat. Try strength, dexterity, or luck.")
+
+
+
+bot.run(discord_token)
+#client.run(discord_token)
