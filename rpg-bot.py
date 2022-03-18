@@ -118,8 +118,6 @@ async def on_message(message):
 #    if 'https://' in message.content:
 #       await message.delete()
     if bot_name != str(message.author):
-        outfile.write(message.content + "\n")
-        outfile.write(message_delimiter + "\n")
         guild_name = message.channel.guild.id
         user_name = message.author
         await give_experience(str(guild_name), str(user_name), message.channel.id, 1)
